@@ -1,0 +1,641 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Daily Desk</title>
+<style>
+  :root {
+    --bg: #EEF2F1;
+    --surface: #FFFFFF;
+    --ink: #1D2B2A;
+    --muted: #51635F;
+    --line: #D3DDDB;
+    --teal: #1F5F5B;
+    --teal-deep: #164744;
+    --gold: #E0A526;
+    --danger: #A33A2E;
+    --serif: "Spectral", Georgia, "Times New Roman", serif;
+    --sans: "Public Sans", system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+  }
+  * { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    margin: 0; background: var(--bg); color: var(--ink);
+    font-family: var(--sans); font-size: 16px; line-height: 1.5;
+  }
+  h1, h2, h3 { font-family: var(--serif); font-weight: 600; margin: 0; line-height: 1.15; }
+  button, input, select, textarea { font: inherit; color: inherit; }
+  a { color: var(--teal); }
+  :focus-visible { outline: 3px solid var(--gold); outline-offset: 2px; }
+
+  .wrap { max-width: 1080px; margin: 0 auto; padding: 0 20px; }
+
+  /* masthead */
+  .mast { padding: 22px 0 0; }
+  .mast .wrap { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; flex-wrap: wrap; }
+  .mast h1 { font-size: 1.9rem; letter-spacing: -0.01em; }
+  .mast .today-date { color: var(--muted); font-size: 0.95rem; }
+
+  .tabs { display: flex; gap: 4px; margin-top: 14px; border-bottom: 1px solid var(--line); }
+  .tab {
+    background: none; border: 0; padding: 10px 16px; cursor: pointer; color: var(--muted);
+    border-bottom: 3px solid transparent; margin-bottom: -1px; font-weight: 600;
+  }
+  .tab[aria-selected="true"] { color: var(--teal-deep); border-bottom-color: var(--teal); }
+  .tab:hover { color: var(--ink); }
+
+  main { padding-bottom: 60px; }
+  .panel[hidden] { display: none; }
+
+  /* hero band */
+  .band { background: var(--teal-deep); color: #fff; margin-top: 0; }
+  .band .wrap { display: grid; grid-template-columns: 1.2fr 1fr; gap: 36px; padding-top: 30px; padding-bottom: 30px; align-items: center; }
+  .band h2 { font-size: 1rem; font-family: var(--sans); font-weight: 600; color: #BFD9D5; margin-bottom: 6px; }
+  .big { font-family: var(--serif); font-size: clamp(2.6rem, 8vw, 4.2rem); line-height: 1; font-weight: 600; }
+  .big small { font-size: 0.4em; font-weight: 400; color: #BFD9D5; margin-left: 6px; }
+  .track { height: 10px; background: rgba(255,255,255,0.16); border-radius: 6px; margin: 16px 0 6px; overflow: hidden; }
+  .fill { height: 100%; width: 0; background: var(--gold); border-radius: 6px; transition: width 0.4s ease; }
+  .band .hint { color: #BFD9D5; font-size: 0.9rem; min-height: 1.4em; }
+  .stats { display: flex; gap: 28px; margin-top: 20px; flex-wrap: wrap; }
+  .stat b { display: block; font-family: var(--serif); font-size: 1.5rem; font-weight: 600; }
+  .stat span { color: #BFD9D5; font-size: 0.85rem; }
+  .goal-input { width: 64px; padding: 4px 6px; border-radius: 4px; border: 1px solid rgba(255,255,255,0.4); background: rgba(255,255,255,0.1); color: #fff; font-family: var(--serif); font-size: 1.2rem; }
+
+  .grid-wrap h3 { font-family: var(--sans); font-size: 1rem; font-weight: 600; color: #BFD9D5; margin-bottom: 10px; }
+  .days { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; max-width: 360px; }
+  .dow { font-size: 0.75rem; color: #BFD9D5; text-align: center; }
+  .tile { aspect-ratio: 1; border-radius: 5px; background: rgba(255,255,255,0.12); }
+  .tile.l1 { background: rgba(255,255,255,0.38); }
+  .tile.l2 { background: rgba(255,255,255,0.7); }
+  .tile.l3 { background: var(--gold); }
+  .tile.future { background: transparent; border: 1px dashed rgba(255,255,255,0.2); }
+  .tile.now { outline: 2px solid #fff; outline-offset: 1px; }
+  .legend { display: flex; gap: 14px; align-items: center; margin-top: 12px; font-size: 0.8rem; color: #BFD9D5; flex-wrap: wrap; }
+  .legend i { display: inline-block; width: 12px; height: 12px; border-radius: 3px; margin-right: 5px; vertical-align: -1px; }
+
+  /* sections */
+  .cols { display: grid; grid-template-columns: 1fr 1fr; gap: 40px; padding-top: 32px; }
+  .sheet { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 22px; }
+  .sheet h2, .section-title { font-size: 1.35rem; margin-bottom: 14px; }
+  label { display: block; font-size: 0.9rem; font-weight: 600; margin-bottom: 4px; }
+  .field { margin-bottom: 14px; }
+  input[type="text"], input[type="date"], input[type="number"], input[type="search"], select, textarea {
+    width: 100%; padding: 9px 10px; border: 1px solid #B5C4C1; border-radius: 6px; background: #fff;
+  }
+  textarea { resize: vertical; min-height: 64px; }
+  .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .btn {
+    background: var(--teal); color: #fff; border: 0; padding: 10px 18px; border-radius: 6px;
+    font-weight: 600; cursor: pointer;
+  }
+  .btn:hover { background: var(--teal-deep); }
+  .btn.ghost { background: none; color: var(--teal-deep); border: 1px solid #B5C4C1; }
+  .btn.ghost:hover { background: #fff; }
+  .link-btn { background: none; border: 0; color: var(--danger); cursor: pointer; padding: 4px 6px; font-size: 0.85rem; }
+  .link-btn:hover { text-decoration: underline; }
+
+  .bars { list-style: none; margin: 0; padding: 0; }
+  .bars li { margin-bottom: 12px; }
+  .bars .lab { display: flex; justify-content: space-between; font-size: 0.92rem; margin-bottom: 4px; }
+  .bars .lab span:last-child { color: var(--muted); }
+  .bar { height: 8px; background: #DCE6E4; border-radius: 5px; overflow: hidden; }
+  .bar > div { height: 100%; background: var(--teal); border-radius: 5px; }
+  .empty { color: var(--muted); margin: 6px 0 0; }
+
+  .log { padding-top: 34px; }
+  .log-head { display: flex; justify-content: space-between; align-items: center; gap: 10px; margin-bottom: 6px; flex-wrap: wrap; }
+  .day-group { border-top: 1px solid var(--line); padding: 14px 0 6px; display: grid; grid-template-columns: 150px 1fr; gap: 18px; }
+  .day-group h3 { font-size: 1rem; font-family: var(--sans); font-weight: 600; }
+  .day-group .sum { color: var(--muted); font-size: 0.85rem; }
+  .entry { display: flex; justify-content: space-between; gap: 12px; padding: 0 0 12px; }
+  .entry .what { font-weight: 600; }
+  .entry .meta { color: var(--muted); font-size: 0.88rem; }
+  .entry .notes { font-size: 0.92rem; margin-top: 2px; max-width: 70ch; }
+
+  /* skills */
+  .skills-top { padding-top: 32px; max-width: 560px; }
+  .add-skill { display: flex; gap: 10px; }
+  .board { display: grid; grid-template-columns: repeat(3, 1fr); gap: 28px; padding-top: 28px; }
+  .board h2 { font-size: 1.2rem; margin-bottom: 4px; padding-bottom: 8px; border-bottom: 2px solid var(--teal); }
+  .board .count { color: var(--muted); font-size: 0.9rem; font-family: var(--sans); font-weight: 400; margin-left: 6px; }
+  .skill { padding: 12px 0; border-bottom: 1px solid var(--line); }
+  .skill .name { font-weight: 600; margin-bottom: 6px; }
+  .skill .acts { display: flex; gap: 8px; align-items: center; }
+  .skill select { width: auto; padding: 4px 8px; font-size: 0.88rem; }
+
+  /* news */
+  .news-top { padding-top: 28px; }
+  .chips { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 14px; }
+  .chip { background: #fff; border: 1px solid #B5C4C1; border-radius: 999px; padding: 6px 14px; cursor: pointer; font-size: 0.92rem; }
+  .chip[aria-pressed="true"] { background: var(--teal); color: #fff; border-color: var(--teal); }
+  .toolbar { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-bottom: 8px; }
+  .toolbar input { max-width: 300px; }
+  .status { color: var(--muted); font-size: 0.88rem; min-height: 1.4em; }
+  .warn { background: #FFF4DD; border: 1px solid #E8C879; border-radius: 6px; padding: 10px 14px; font-size: 0.92rem; margin: 10px 0; max-width: 760px; }
+  .news-layout { display: grid; grid-template-columns: minmax(0, 1fr) 280px; gap: 44px; }
+  .headline { padding: 14px 0; border-bottom: 1px solid var(--line); max-width: 760px; }
+  .headline a { font-family: var(--serif); font-size: 1.15rem; font-weight: 600; color: var(--ink); text-decoration: none; line-height: 1.25; }
+  .headline a:hover { color: var(--teal); text-decoration: underline; }
+  .headline .src { color: var(--muted); font-size: 0.85rem; margin-top: 3px; }
+  .side h2 { font-size: 1.15rem; margin-bottom: 8px; }
+  .side ul { list-style: none; margin: 0 0 24px; padding: 0; }
+  .side li { padding: 7px 0; border-bottom: 1px solid var(--line); font-size: 0.95rem; }
+  .skeleton { height: 18px; background: #DCE6E4; border-radius: 4px; margin: 16px 0; max-width: 700px; }
+
+  @media (max-width: 860px) {
+    .band .wrap, .cols, .news-layout { grid-template-columns: 1fr; gap: 28px; }
+    .board { grid-template-columns: 1fr; }
+    .day-group { grid-template-columns: 1fr; gap: 6px; }
+  }
+  @media (prefers-reduced-motion: reduce) { .fill { transition: none; } }
+</style>
+</head>
+<body>
+
+<header class="mast">
+  <div class="wrap">
+    <h1>Daily Desk</h1>
+    <div class="today-date" id="todayDate"></div>
+  </div>
+  <div class="wrap">
+    <div class="tabs" role="tablist" aria-label="Sections">
+      <button class="tab" role="tab" id="tab-learn" aria-controls="panel-learn" aria-selected="true">Learning log</button>
+      <button class="tab" role="tab" id="tab-skills" aria-controls="panel-skills" aria-selected="false">Skills</button>
+      <button class="tab" role="tab" id="tab-news" aria-controls="panel-news" aria-selected="false">World finance news</button>
+    </div>
+  </div>
+</header>
+
+<main>
+  <!-- LEARNING LOG -->
+  <section class="panel" id="panel-learn" role="tabpanel" aria-labelledby="tab-learn">
+    <div class="band">
+      <div class="wrap">
+        <div>
+          <h2>Today</h2>
+          <div class="big"><span id="todayMins">0</span><small id="goalText">of 30 minutes</small></div>
+          <div class="track" role="progressbar" aria-label="Progress toward daily goal" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" id="track"><div class="fill" id="fill"></div></div>
+          <div class="hint" id="hint"></div>
+          <div class="stats">
+            <div class="stat"><b id="streak">0 days</b><span>Current streak</span></div>
+            <div class="stat"><b id="weekTotal">0 min</b><span>Last 7 days</span></div>
+            <div class="stat"><label for="goalInput" style="color:#BFD9D5;font-weight:400;font-size:.85rem;margin:0;">Daily goal (min)</label><input class="goal-input" id="goalInput" type="number" min="5" max="600" step="5" value="30"></div>
+          </div>
+        </div>
+        <div class="grid-wrap">
+          <h3>Last four weeks</h3>
+          <div class="days" id="dayLabels" aria-hidden="true"></div>
+          <div class="days" id="grid" style="margin-top:6px"></div>
+          <div class="legend">
+            <span><i style="background:rgba(255,255,255,0.12)"></i>No study</span>
+            <span><i style="background:rgba(255,255,255,0.6)"></i>Some</span>
+            <span><i style="background:var(--gold)"></i>Goal met</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="wrap">
+      <div class="cols">
+        <div class="sheet">
+          <h2>Log what you learned</h2>
+          <form id="entryForm" autocomplete="off">
+            <div class="field">
+              <label for="topic">What did you study?</label>
+              <input type="text" id="topic" required maxlength="120" placeholder="e.g. ITGC change management controls">
+            </div>
+            <div class="row2">
+              <div class="field">
+                <label for="cat">Category</label>
+                <select id="cat"></select>
+              </div>
+              <div class="field">
+                <label for="mins">Minutes</label>
+                <input type="number" id="mins" min="1" max="720" value="30" required>
+              </div>
+            </div>
+            <div class="field">
+              <label for="date">Date</label>
+              <input type="date" id="date" required>
+            </div>
+            <div class="field">
+              <label for="notes">Key takeaway (optional)</label>
+              <textarea id="notes" maxlength="400" placeholder="One thing you want to remember"></textarea>
+            </div>
+            <button class="btn" type="submit">Save entry</button>
+          </form>
+        </div>
+        <div>
+          <h2 class="section-title">Where your time went (last 30 days)</h2>
+          <ul class="bars" id="catBars"></ul>
+        </div>
+      </div>
+
+      <div class="log">
+        <div class="log-head">
+          <h2 class="section-title" style="margin:0">Recent entries</h2>
+          <button class="btn ghost" id="exportBtn" type="button">Download log (CSV)</button>
+        </div>
+        <div id="logList"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- SKILLS -->
+  <section class="panel" id="panel-skills" role="tabpanel" aria-labelledby="tab-skills" hidden>
+    <div class="wrap">
+      <div class="skills-top">
+        <h2 class="section-title">Skills you are building</h2>
+        <form class="add-skill" id="skillForm" autocomplete="off">
+          <label for="skillName" class="sr" style="position:absolute;left:-9999px">Skill name</label>
+          <input type="text" id="skillName" required maxlength="80" placeholder="Add a skill, e.g. Power BI dashboards">
+          <button class="btn" type="submit">Add skill</button>
+        </form>
+      </div>
+      <div class="board" id="board"></div>
+    </div>
+  </section>
+
+  <!-- NEWS -->
+  <section class="panel" id="panel-news" role="tabpanel" aria-labelledby="tab-news" hidden>
+    <div class="wrap news-top">
+      <div class="chips" id="chips" role="group" aria-label="Region"></div>
+      <div class="toolbar">
+        <label for="newsSearch" style="position:absolute;left:-9999px">Filter headlines</label>
+        <input type="search" id="newsSearch" placeholder="Filter headlines, e.g. RBI, Fed, oil">
+        <button class="btn ghost" id="refreshBtn" type="button">Refresh</button>
+        <span class="status" id="newsStatus" role="status"></span>
+      </div>
+      <div id="newsWarn"></div>
+      <div class="news-layout">
+        <div id="newsList"></div>
+        <aside class="side">
+          <h2>Live market pages</h2>
+          <ul>
+            <li><a href="https://www.google.com/finance/" target="_blank" rel="noopener">Google Finance</a></li>
+            <li><a href="https://www.tradingview.com/markets/" target="_blank" rel="noopener">TradingView markets</a></li>
+            <li><a href="https://www.reuters.com/markets/" target="_blank" rel="noopener">Reuters markets</a></li>
+            <li><a href="https://www.bloomberg.com/markets" target="_blank" rel="noopener">Bloomberg markets</a></li>
+            <li><a href="https://www.ft.com/markets" target="_blank" rel="noopener">Financial Times markets</a></li>
+            <li><a href="https://www.nseindia.com/" target="_blank" rel="noopener">NSE India</a></li>
+          </ul>
+          <h2>Audit and standards</h2>
+          <ul>
+            <li><a href="https://pcaobus.org/news-events/news-releases" target="_blank" rel="noopener">PCAOB news</a></li>
+            <li><a href="https://www.fasb.org/news-and-meetings" target="_blank" rel="noopener">FASB news</a></li>
+            <li><a href="https://www.ifrs.org/news-and-events/news/" target="_blank" rel="noopener">IFRS Foundation news</a></li>
+            <li><a href="https://www.icai.org/" target="_blank" rel="noopener">ICAI</a></li>
+          </ul>
+        </aside>
+      </div>
+    </div>
+  </section>
+</main>
+
+<script>
+(function () {
+  "use strict";
+
+  /* ---------- storage (works in Claude previews and in a normal browser) ---------- */
+  var KEY = "dailydesk:data";
+  var memory = null;
+  var store = {
+    load: async function () {
+      try {
+        if (window.storage) {
+          try { var r = await window.storage.get(KEY); return r && r.value ? JSON.parse(r.value) : null; }
+          catch (e) { return null; }
+        }
+      } catch (e) {}
+      try { var v = window.localStorage.getItem(KEY); return v ? JSON.parse(v) : memory; } catch (e) { return memory; }
+    },
+    save: async function (data) {
+      memory = data;
+      try {
+        if (window.storage) { await window.storage.set(KEY, JSON.stringify(data)); return; }
+      } catch (e) {}
+      try { window.localStorage.setItem(KEY, JSON.stringify(data)); } catch (e) {}
+    }
+  };
+
+  var CATEGORIES = ["Audit and controls", "Accounting standards", "Data and analytics", "Tools (Excel, Power BI)", "Capital markets", "Interview prep", "Other"];
+  var DEFAULT_SKILLS = [
+    { name: "COSO and SOX 404 refresh", status: "learning" },
+    { name: "US GAAP: revenue recognition (ASC 606)", status: "todo" },
+    { name: "Power BI audit dashboard", status: "todo" },
+    { name: "Payments and PCI-DSS basics", status: "todo" },
+    { name: "Capital markets basics", status: "todo" }
+  ];
+  var data = { entries: [], skills: [], goal: 30 };
+
+  function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 7); }
+  function pad(n) { return n < 10 ? "0" + n : "" + n; }
+  function ymd(d) { return d.getFullYear() + "-" + pad(d.getMonth() + 1) + "-" + pad(d.getDate()); }
+  function parseYmd(s) { var p = s.split("-"); return new Date(+p[0], +p[1] - 1, +p[2]); }
+  function addDays(d, n) { var x = new Date(d.getTime()); x.setDate(x.getDate() + n); return x; }
+  function esc(s) { return String(s).replace(/[&<>"']/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]; }); }
+  function fmtMins(m) { if (m < 60) return m + " min"; var h = Math.floor(m / 60), r = m % 60; return h + "h" + (r ? " " + r + "m" : ""); }
+  function $(id) { return document.getElementById(id); }
+
+  /* ---------- tabs ---------- */
+  var tabs = ["learn", "skills", "news"];
+  var newsStarted = false;
+  function showTab(name) {
+    tabs.forEach(function (t) {
+      var on = t === name;
+      $("tab-" + t).setAttribute("aria-selected", on ? "true" : "false");
+      $("panel-" + t).hidden = !on;
+    });
+    if (name === "news" && !newsStarted) { newsStarted = true; loadNews(false); }
+  }
+  tabs.forEach(function (t) { $("tab-" + t).addEventListener("click", function () { showTab(t); }); });
+
+  /* ---------- learning log ---------- */
+  function minsByDay() {
+    var m = {};
+    data.entries.forEach(function (e) { m[e.date] = (m[e.date] || 0) + e.mins; });
+    return m;
+  }
+
+  function renderLearn() {
+    var map = minsByDay();
+    var now = new Date();
+    var todayKey = ymd(now);
+    var todayMins = map[todayKey] || 0;
+    var goal = data.goal;
+
+    $("todayMins").textContent = todayMins;
+    $("goalText").textContent = "of " + goal + " minutes";
+    var pct = Math.min(100, Math.round(todayMins / goal * 100));
+    $("fill").style.width = pct + "%";
+    $("track").setAttribute("aria-valuenow", pct);
+    $("hint").textContent = todayMins === 0 ? "Nothing logged yet. Even 10 minutes keeps your streak alive."
+      : todayMins >= goal ? "Goal met for today. Anything more is a bonus."
+      : (goal - todayMins) + " more minutes to reach today's goal.";
+
+    // streak
+    var d = new Date();
+    if (!map[ymd(d)]) d = addDays(d, -1);
+    var streak = 0;
+    while (map[ymd(d)] > 0) { streak++; d = addDays(d, -1); }
+    $("streak").textContent = streak + (streak === 1 ? " day" : " days");
+
+    // last 7 days
+    var week = 0;
+    for (var i = 0; i < 7; i++) week += map[ymd(addDays(now, -i))] || 0;
+    $("weekTotal").textContent = fmtMins(week);
+
+    // 4-week grid, Monday first
+    var dayLabels = ["M", "T", "W", "T", "F", "S", "S"];
+    $("dayLabels").innerHTML = dayLabels.map(function (l) { return '<div class="dow">' + l + "</div>"; }).join("");
+    var dow = (now.getDay() + 6) % 7;
+    var start = addDays(now, -(dow + 21));
+    var html = "";
+    for (var k = 0; k < 28; k++) {
+      var day = addDays(start, k), key = ymd(day), mm = map[key] || 0;
+      var cls = "tile";
+      if (day > now && key !== todayKey) cls += " future";
+      else if (mm >= goal) cls += " l3";
+      else if (mm >= goal * 0.5) cls += " l2";
+      else if (mm > 0) cls += " l1";
+      if (key === todayKey) cls += " now";
+      html += '<div class="' + cls + '" title="' + key + ": " + mm + ' min"></div>';
+    }
+    $("grid").innerHTML = html;
+
+    // category bars (30 days)
+    var cutoff = ymd(addDays(now, -29));
+    var totals = {};
+    data.entries.forEach(function (e) { if (e.date >= cutoff) totals[e.cat] = (totals[e.cat] || 0) + e.mins; });
+    var keys = Object.keys(totals).sort(function (a, b) { return totals[b] - totals[a]; });
+    if (!keys.length) {
+      $("catBars").innerHTML = '<li class="empty">No entries in the last 30 days. Log your first session to see the split.</li>';
+    } else {
+      var max = totals[keys[0]];
+      $("catBars").innerHTML = keys.map(function (c) {
+        return '<li><div class="lab"><span>' + esc(c) + "</span><span>" + fmtMins(totals[c]) + '</span></div><div class="bar"><div style="width:' + Math.round(totals[c] / max * 100) + '%"></div></div></li>';
+      }).join("");
+    }
+
+    // log list
+    var sorted = data.entries.slice().sort(function (a, b) { return a.date < b.date ? 1 : a.date > b.date ? -1 : b.id < a.id ? -1 : 1; });
+    sorted = sorted.slice(0, 60);
+    if (!sorted.length) {
+      $("logList").innerHTML = '<p class="empty">Your log is empty. Add what you studied today using the form above.</p>';
+      return;
+    }
+    var groups = {}, order = [];
+    sorted.forEach(function (e) { if (!groups[e.date]) { groups[e.date] = []; order.push(e.date); } groups[e.date].push(e); });
+    $("logList").innerHTML = order.map(function (dt) {
+      var total = groups[dt].reduce(function (s, e) { return s + e.mins; }, 0);
+      var label = parseYmd(dt).toLocaleDateString(undefined, { weekday: "short", day: "numeric", month: "short", year: "numeric" });
+      return '<div class="day-group"><div><h3>' + esc(label) + '</h3><div class="sum">' + fmtMins(total) + " total</div></div><div>" +
+        groups[dt].map(function (e) {
+          return '<div class="entry"><div><div class="what">' + esc(e.topic) + '</div><div class="meta">' + esc(e.cat) + ", " + fmtMins(e.mins) + "</div>" +
+            (e.notes ? '<div class="notes">' + esc(e.notes) + "</div>" : "") +
+            '</div><button class="link-btn" data-del="' + e.id + '" aria-label="Delete entry ' + esc(e.topic) + '">Delete</button></div>';
+        }).join("") + "</div></div>";
+    }).join("");
+  }
+
+  $("logList").addEventListener("click", function (ev) {
+    var id = ev.target && ev.target.getAttribute && ev.target.getAttribute("data-del");
+    if (!id) return;
+    data.entries = data.entries.filter(function (e) { return e.id !== id; });
+    store.save(data); renderLearn();
+  });
+
+  $("entryForm").addEventListener("submit", function (ev) {
+    ev.preventDefault();
+    var topic = $("topic").value.trim();
+    var mins = parseInt($("mins").value, 10);
+    if (!topic || !(mins > 0)) return;
+    data.entries.push({ id: uid(), date: $("date").value || ymd(new Date()), cat: $("cat").value, topic: topic, mins: mins, notes: $("notes").value.trim() });
+    store.save(data);
+    $("topic").value = ""; $("notes").value = "";
+    renderLearn();
+    $("topic").focus();
+  });
+
+  $("goalInput").addEventListener("change", function () {
+    var g = parseInt(this.value, 10);
+    if (g >= 5 && g <= 600) { data.goal = g; store.save(data); renderLearn(); } else { this.value = data.goal; }
+  });
+
+  $("exportBtn").addEventListener("click", function () {
+    var rows = [["Date", "Category", "Topic", "Minutes", "Notes"]].concat(
+      data.entries.slice().sort(function (a, b) { return a.date < b.date ? -1 : 1; }).map(function (e) { return [e.date, e.cat, e.topic, e.mins, e.notes || ""]; }));
+    var csv = rows.map(function (r) { return r.map(function (c) { return '"' + String(c).replace(/"/g, '""') + '"'; }).join(","); }).join("\n");
+    var a = document.createElement("a");
+    a.href = URL.createObjectURL(new Blob([csv], { type: "text/csv" }));
+    a.download = "learning-log.csv";
+    document.body.appendChild(a); a.click(); a.remove();
+  });
+
+  /* ---------- skills ---------- */
+  var STATUS = [["todo", "To learn"], ["learning", "Learning"], ["done", "Done"]];
+  function renderSkills() {
+    $("board").innerHTML = STATUS.map(function (s) {
+      var items = data.skills.filter(function (k) { return k.status === s[0]; });
+      return "<div><h2>" + s[1] + '<span class="count">' + items.length + "</span></h2>" +
+        (items.length ? items.map(function (k) {
+          return '<div class="skill"><div class="name">' + esc(k.name) + '</div><div class="acts"><select data-move="' + k.id + '" aria-label="Move ' + esc(k.name) + '">' +
+            STATUS.map(function (o) { return '<option value="' + o[0] + '"' + (o[0] === k.status ? " selected" : "") + ">" + o[1] + "</option>"; }).join("") +
+            '</select><button class="link-btn" data-rm="' + k.id + '" aria-label="Remove ' + esc(k.name) + '">Remove</button></div></div>';
+        }).join("") : '<p class="empty">Nothing here yet.</p>') + "</div>";
+    }).join("");
+  }
+  $("board").addEventListener("change", function (ev) {
+    var id = ev.target.getAttribute("data-move");
+    if (!id) return;
+    data.skills.forEach(function (k) { if (k.id === id) k.status = ev.target.value; });
+    store.save(data); renderSkills();
+  });
+  $("board").addEventListener("click", function (ev) {
+    var id = ev.target.getAttribute && ev.target.getAttribute("data-rm");
+    if (!id) return;
+    data.skills = data.skills.filter(function (k) { return k.id !== id; });
+    store.save(data); renderSkills();
+  });
+  $("skillForm").addEventListener("submit", function (ev) {
+    ev.preventDefault();
+    var name = $("skillName").value.trim();
+    if (!name) return;
+    data.skills.push({ id: uid(), name: name, status: "todo" });
+    $("skillName").value = "";
+    store.save(data); renderSkills();
+  });
+
+  /* ---------- news ---------- */
+  var REGIONS = {
+    world: { label: "World", feeds: [
+      ["BBC Business", "https://feeds.bbci.co.uk/news/business/rss.xml"],
+      ["CNBC", "https://search.cnbc.com/rs/search/combinedcms/view.xml?partnerId=wrss01&id=100003114"],
+      ["MarketWatch", "http://feeds.marketwatch.com/marketwatch/topstories/"],
+      ["The Guardian", "https://www.theguardian.com/business/rss"]] },
+    india: { label: "India", feeds: [
+      ["Economic Times", "https://economictimes.indiatimes.com/markets/rssfeeds/1977021501.cms"],
+      ["Mint", "https://www.livemint.com/rss/markets"],
+      ["Moneycontrol", "https://www.moneycontrol.com/rss/latestnews.xml"],
+      ["Business Standard", "https://www.business-standard.com/rss/markets-106.rss"]] },
+    us: { label: "United States", feeds: [
+      ["CNBC", "https://search.cnbc.com/rs/search/combinedcms/view.xml?partnerId=wrss01&id=100003114"],
+      ["MarketWatch", "http://feeds.marketwatch.com/marketwatch/topstories/"],
+      ["Yahoo Finance", "https://finance.yahoo.com/news/rssindex"]] },
+    europe: { label: "Europe", feeds: [
+      ["The Guardian UK", "https://www.theguardian.com/uk/business/rss"],
+      ["DW Business", "https://rss.dw.com/rdf/rss-en-bus"],
+      ["BBC Business", "https://feeds.bbci.co.uk/news/business/rss.xml"]] },
+    asia: { label: "Asia-Pacific", feeds: [
+      ["Nikkei Asia", "https://asia.nikkei.com/rss/feed/nar"],
+      ["SCMP Business", "https://www.scmp.com/rss/92/feed"],
+      ["Straits Times", "https://www.straitstimes.com/news/business/rss.xml"]] },
+    accounting: { label: "Accounting and audit", feeds: [
+      ["Accounting Today", "https://www.accountingtoday.com/feed"],
+      ["CFO Dive", "https://www.cfodive.com/feeds/news/"]] }
+  };
+  var region = "world";
+  var cache = {};           // region -> { time, items, failed }
+  var CACHE_MS = 15 * 60 * 1000;
+  var currentItems = [];
+
+  function renderChips() {
+    $("chips").innerHTML = Object.keys(REGIONS).map(function (k) {
+      return '<button class="chip" data-region="' + k + '" aria-pressed="' + (k === region) + '">' + REGIONS[k].label + "</button>";
+    }).join("");
+  }
+  $("chips").addEventListener("click", function (ev) {
+    var k = ev.target.getAttribute && ev.target.getAttribute("data-region");
+    if (!k || k === region) return;
+    region = k; renderChips(); loadNews(false);
+  });
+
+  function timeAgo(t) {
+    if (!t) return "";
+    var s = Math.max(0, (Date.now() - t) / 1000);
+    if (s < 3600) return Math.max(1, Math.round(s / 60)) + " min ago";
+    if (s < 86400) return Math.round(s / 3600) + " h ago";
+    return Math.round(s / 86400) + " d ago";
+  }
+
+  async function fetchFeed(name, url) {
+    var api = "https://api.rss2json.com/v1/api.json?rss_url=" + encodeURIComponent(url);
+    var res = await fetch(api);
+    if (!res.ok) throw new Error("HTTP " + res.status);
+    var j = await res.json();
+    if (j.status !== "ok" || !j.items) throw new Error("Feed unavailable");
+    return j.items.slice(0, 15).map(function (it) {
+      var t = it.pubDate ? Date.parse(it.pubDate.replace(" ", "T") + "Z") : NaN;
+      return { title: (it.title || "").trim(), link: it.link, source: name, time: isNaN(t) ? 0 : t };
+    }).filter(function (x) { return x.title && /^https?:\/\//.test(x.link || ""); });
+  }
+
+  async function loadNews(force) {
+    var c = cache[region];
+    if (!force && c && Date.now() - c.time < CACHE_MS) { currentItems = c.items; drawNews(c.failed, c.time); return; }
+    $("newsStatus").textContent = "Loading headlines...";
+    $("newsWarn").innerHTML = "";
+    $("newsList").innerHTML = '<div class="skeleton"></div><div class="skeleton"></div><div class="skeleton"></div><div class="skeleton"></div>';
+    var feeds = REGIONS[region].feeds;
+    var results = await Promise.allSettled(feeds.map(function (f) { return fetchFeed(f[0], f[1]); }));
+    var items = [], failed = [], seen = {};
+    results.forEach(function (r, i) {
+      if (r.status === "fulfilled") {
+        r.value.forEach(function (it) { var k = it.title.toLowerCase(); if (!seen[k]) { seen[k] = 1; items.push(it); } });
+      } else failed.push(feeds[i][0]);
+    });
+    items.sort(function (a, b) { return b.time - a.time; });
+    cache[region] = { time: Date.now(), items: items, failed: failed };
+    currentItems = items;
+    drawNews(failed, Date.now());
+  }
+
+  function drawNews(failed, when) {
+    var q = $("newsSearch").value.trim().toLowerCase();
+    var list = q ? currentItems.filter(function (i) { return i.title.toLowerCase().indexOf(q) !== -1; }) : currentItems;
+    var upd = new Date(when).toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" });
+    $("newsStatus").textContent = "Updated " + upd + ". " + list.length + " headline" + (list.length === 1 ? "" : "s") + ".";
+    var warn = "";
+    if (!currentItems.length) {
+      warn = '<div class="warn">No headlines could be loaded. This page needs an internet connection and works best when opened in a normal browser tab. Some preview windows block outside requests. You can still use the live market pages on the right.</div>';
+    } else if (failed.length) {
+      warn = '<div class="warn">Could not load: ' + esc(failed.join(", ")) + ". Their feeds may be down or may have moved. The other sources are shown.</div>";
+    }
+    $("newsWarn").innerHTML = warn;
+    if (!list.length) {
+      $("newsList").innerHTML = currentItems.length ? '<p class="empty">No headlines match your filter.</p>' : "";
+      return;
+    }
+    $("newsList").innerHTML = list.slice(0, 70).map(function (i) {
+      return '<div class="headline"><a href="' + esc(i.link) + '" target="_blank" rel="noopener">' + esc(i.title) + '</a><div class="src">' + esc(i.source) + (i.time ? ", " + timeAgo(i.time) : "") + "</div></div>";
+    }).join("");
+  }
+
+  $("newsSearch").addEventListener("input", function () { var c = cache[region]; if (c) drawNews(c.failed, c.time); });
+  $("refreshBtn").addEventListener("click", function () { loadNews(true); });
+
+  /* ---------- init ---------- */
+  async function init() {
+    $("todayDate").textContent = new Date().toLocaleDateString(undefined, { weekday: "long", day: "numeric", month: "long", year: "numeric" });
+    $("cat").innerHTML = CATEGORIES.map(function (c) { return "<option>" + esc(c) + "</option>"; }).join("");
+    $("date").value = ymd(new Date());
+    renderChips();
+
+    var saved = await store.load();
+    if (saved && Array.isArray(saved.entries)) {
+      data = saved;
+      if (!Array.isArray(data.skills)) data.skills = [];
+      if (!(data.goal >= 5)) data.goal = 30;
+    } else {
+      data.skills = DEFAULT_SKILLS.map(function (s) { return { id: uid(), name: s.name, status: s.status }; });
+      store.save(data);
+    }
+    $("goalInput").value = data.goal;
+    renderLearn(); renderSkills();
+  }
+  init();
+})();
+</script>
+</body>
+</html>
